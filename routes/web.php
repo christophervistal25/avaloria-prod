@@ -52,8 +52,17 @@ Route::get('download', function () {
 
 
 Route::get('rankings', function () {
-    $characters = Character::orderBy('TotalPlayTime', 'DESC')->orderBy('m_nLevel', 'DESC')->paginate(20);
+    $topCharacters = Character::orderBy('m_nLevel', 'DESC')->orderBy('TotalPlayTime', 'DESC')->take(3)->get(['m_idPlayer', 'm_szName', 'account', 'TotalPlayTime', 'm_nLevel']);
+    
+    $topCharacterIds = $topCharacters->pluck('m_idPlayer')->toArray();
+    
+    $characters = Character::orderBy('m_nLevel', 'DESC')
+        ->orderBy('TotalPlayTime', 'DESC')
+        ->whereNotIn('m_idPlayer', $topCharacterIds)
+        ->paginate(20, ['m_idPlayer', 'm_szName', 'account', 'TotalPlayTime', 'm_nLevel']);
+    
     return Inertia::render('Rankings', [
+        'topCharacters' => $topCharacters,
         'characters' => $characters,
     ]);
 });

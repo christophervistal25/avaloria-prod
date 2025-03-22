@@ -4,15 +4,14 @@ import Navigation from "@/components/Navigation.vue";
 import Footer from "@/components/Footer.vue";
 import Layout from "@layouts/Layout.vue";
 import { ref, computed } from "vue";
+import moment from "moment";
 
 const props = defineProps({
   characters: Object,
+  topCharacters: Object,
 });
 
-// Get top 3 players for podium
-const topThreePlayers = computed(() => {
-  return props.characters.data.slice(0, 3);
-});
+
 
 // Get remaining players (4th position onwards)
 const remainingPlayers = computed(() => {
@@ -110,12 +109,9 @@ const getPodiumHeight = (position) => {
   }
 };
 
-// Format playtime from minutes to hours and minutes
-const formatPlaytime = (minutes) => {
-  if (!minutes) return "0h 0m";
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
+const formatPlaytime = (seconds) => {
+  if (!seconds) return "0h 0m";
+  return moment.utc(seconds * 1000).format("H[h] m[m]");
 };
 </script>
 
@@ -181,7 +177,7 @@ const formatPlaytime = (minutes) => {
             class="flex flex-col lg:flex-row items-end justify-center gap-8 mb-20"
           >
             <div
-              v-for="(player, index) in topThreePlayers"
+              v-for="(player, index) in topCharacters"
               :key="player.id"
               :class="['relative group', getPodiumClass(index)]"
               class="flex flex-col items-center w-full lg:w-1/3 transition-all"

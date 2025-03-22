@@ -41,6 +41,11 @@ const ckEditorConfig = {
 // Initialize form with itemEditors tracking
 const itemEditors = ref([{ editorData: '' }])
 
+// Initialize arrays for tracking item images
+const itemImages = ref([{
+  previews: [] // Array of preview URLs for the uploads
+}])
+
 const form = useForm({
   title: '',
   description: '',
@@ -49,7 +54,8 @@ const form = useForm({
   items: [
     {
       title: '',
-      description: ''
+      description: '',
+      newImages: [] // Array for multiple file uploads
     }
   ]
 })
@@ -57,15 +63,56 @@ const form = useForm({
 const addItem = () => {
   form.items.push({
     title: '',
-    description: ''
+    description: '',
+    newImages: []
   })
   itemEditors.value.push({ editorData: '' })
+  itemImages.value.push({ previews: [] })
 }
 
 const removeItem = (index) => {
   if (form.items.length > 1) {
     form.items.splice(index, 1)
     itemEditors.value.splice(index, 1)
+    itemImages.value.splice(index, 1)
+  }
+}
+
+const handleItemImageUpload = (event, index) => {
+  const files = event.target.files
+  if (files && files.length > 0) {
+    // Convert FileList to Array to handle multiple files
+    const fileArray = Array.from(files)
+    
+    // Add new files to the form
+    form.items[index].newImages.push(...fileArray)
+    
+    // Create preview URLs for each file
+    fileArray.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        itemImages.value[index].previews.push({
+          file: file,
+          preview: e.target.result
+        })
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+  
+  // Clear the input to allow re-selecting the same files
+  event.target.value = ''
+}
+
+const removeItemImage = (itemIndex, imageIndex) => {
+  // Remove from preview array
+  const removedFile = itemImages.value[itemIndex].previews[imageIndex].file
+  itemImages.value[itemIndex].previews.splice(imageIndex, 1)
+  
+  // Remove from form
+  const fileIndex = form.items[itemIndex].newImages.findIndex(file => file === removedFile)
+  if (fileIndex !== -1) {
+    form.items[itemIndex].newImages.splice(fileIndex, 1)
   }
 }
 
@@ -79,14 +126,17 @@ const submit = () => {
     description: itemEditors.value[index].editorData
   }))
 
-  form.post("/administrator-panel/wikipedia")
+  // Submit the form with all files intact
+  form.post("/administrator-panel/wikipedia", {
+    forceFormData: true
+  })
 }
 </script>
 
 
 <template>
   <Layout>
-    <div class="min-h-screen  py-8">
+    <div class="min-h-screen py-8">
       <div class="">
         <!-- Enhanced Header -->
         <div class="md:flex md:items-center md:justify-between mb-8">
@@ -101,8 +151,6 @@ const submit = () => {
             <p class="mt-2 text-sm text-gray-600">Add a new entry to your game's wiki documentation.</p>
           </div>
         </div>
-
-        
 
         <!-- Main Form Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -242,6 +290,62 @@ const submit = () => {
                           </svg>
                         </div>
                         </div>
+                    </div>
+
+                    <!-- Multiple Item Images -->
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Item Images
+                        <span class="text-xs text-gray-500 ml-1">
+                          (You can upload multiple images)
+                        </span>
+                      </label>
+                      
+                      <!-- Image Gallery - Uploaded Images -->
+                      <div v-if="itemImages[index].previews.length > 0" class="mb-4">
+                        <p class="text-sm text-gray-700 mb-2">Selected Images:</p>
+                        <div class="flex flex-wrap gap-3">
+                          <div v-for="(image, imgIndex) in itemImages[index].previews" 
+                               :key="imgIndex"
+                               class="relative">
+                            <img :src="image.preview" 
+                                 alt="Item image" 
+                                 class="h-24 w-24 object-cover rounded-lg border border-gray-300 shadow-sm" />
+                            <button 
+                              @click="removeItemImage(index, imgIndex)" 
+                              type="button" 
+                              class="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-gray-300 text-gray-500 hover:text-red-500"
+                            >
+                              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Upload Button -->
+                      <div class="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors duration-200">
+                        <div class="space-y-1 text-center">
+                          <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                          <div class="flex text-sm text-gray-600 justify-center">
+                            <label class="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                              <span>Upload images</span>
+                              <input 
+                                type="file" 
+                                @input="handleItemImageUpload($event, index)" 
+                                accept="image/*"
+                                multiple
+                                class="sr-only"
+                              >
+                            </label>
+                            <p class="pl-1">for this item</p>
+                          </div>
+                          <p class="text-xs text-gray-500">PNG, JPG, GIF</p>
+                        </div>
+                      </div>
                     </div>
 
                     <div>

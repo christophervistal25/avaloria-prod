@@ -117,9 +117,9 @@ Route::get('flyff-events', [EventController::class, 'getEvents']);
 
 Route::group(['prefix' => 'user-account'], function () {
     Route::get('dashboard', [UserController::class, 'index'])->name('me.dashboard');
+    Route::post('new-password', [UserController::class, 'newPassword'])->name('me.new-password');
     Route::post('in-game-account', [UserController::class, 'createInGameAccount']);
     Route::post('change-password', [UserController::class, 'changePassword']);
-
     Route::post('redeem-code',  [UserController::class, 'redeemCode']);
 });
 

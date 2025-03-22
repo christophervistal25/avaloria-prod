@@ -36,6 +36,42 @@ const hasItems = computed(() => {
   return props.wikipedia.items && props.wikipedia.items.length > 0;
 });
 
+// Function to parse multiple images from pipe-delimited string
+const parseItemImages = (imageString) => {
+  if (!imageString) return [];
+  return imageString.split('|').filter(img => img.trim() !== '');
+};
+
+// For each item, track the currently displayed image
+const activeImageIndexes = ref({});
+
+// Initialize active image indexes for all items
+onMounted(() => {
+  if (props.wikipedia.items) {
+    props.wikipedia.items.forEach((item, index) => {
+      activeImageIndexes.value[index] = 0;
+    });
+  }
+});
+
+// Navigate to the next image for an item
+const nextImage = (itemIndex, images) => {
+  if (activeImageIndexes.value[itemIndex] < images.length - 1) {
+    activeImageIndexes.value[itemIndex]++;
+  } else {
+    activeImageIndexes.value[itemIndex] = 0; // Loop back to the first image
+  }
+};
+
+// Navigate to the previous image for an item
+const prevImage = (itemIndex, images) => {
+  if (activeImageIndexes.value[itemIndex] > 0) {
+    activeImageIndexes.value[itemIndex]--;
+  } else {
+    activeImageIndexes.value[itemIndex] = images.length - 1; // Loop to the last image
+  }
+};
+
 // Format date in a nicer way
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -59,7 +95,6 @@ const formatDate = (dateString) => {
             :src="`/storage/${wikipedia.image}`" 
             :alt="wikipedia.title"
             class="w-full h-full object-cover opacity-30"
-            @error="e => e.target.src = 'https://via.placeholder.com/1200x600?text=Avaloria+Wiki'"
           />
           <div v-else class="w-full h-full bg-gradient-to-br from-indigo-900/20 to-purple-900/20"></div>
           
@@ -179,6 +214,81 @@ const formatDate = (dateString) => {
                           </div>
                           
                           <div class="prose prose-invert prose-sm max-w-none mt-2" v-html="item.description"></div>
+                          
+                          <!-- Image Gallery -->
+                          <div v-if="item.image" class="mt-6">
+                            <!-- Parse the | delimited image string -->
+                            <div 
+                              v-if="parseItemImages(item.image).length > 0" 
+                              class="relative rounded-lg overflow-hidden"
+                            >
+                              <!-- Main image display -->
+                              <div class="aspect-w-16 aspect-h-9 relative">
+                                <img 
+                                  :src="`/storage/${parseItemImages(item.image)[activeImageIndexes[index] || 0]}`" 
+                                  :alt="item.title"
+                                  class="w-full h-full object-contain bg-gray-900/50 rounded-lg shadow-lg"
+                                />
+                                
+                                <!-- Image counter badge -->
+                                <div 
+                                  v-if="parseItemImages(item.image).length > 1"
+                                  class="absolute top-4 right-4 bg-gray-900/70 px-2 py-1 rounded-md text-xs font-medium text-white"
+                                >
+                                  {{ (activeImageIndexes[index] || 0) + 1 }} / {{ parseItemImages(item.image).length }}
+                                </div>
+                              </div>
+                              
+                              <!-- Navigation arrows for multiple images -->
+                              <div 
+                                v-if="parseItemImages(item.image).length > 1"
+                                class="absolute inset-0 flex items-center justify-between px-4"
+                              >
+                                <button 
+                                  @click="prevImage(index, parseItemImages(item.image))" 
+                                  class="w-10 h-10 rounded-full bg-gray-900/50 flex items-center justify-center text-white hover:bg-indigo-600/80 transition-colors"
+                                  aria-label="Previous image"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                  </svg>
+                                </button>
+                                <button 
+                                  @click="nextImage(index, parseItemImages(item.image))" 
+                                  class="w-10 h-10 rounded-full bg-gray-900/50 flex items-center justify-center text-white hover:bg-indigo-600/80 transition-colors"
+                                  aria-label="Next image"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                  </svg>
+                                </button>
+                              </div>
+                              
+                              <!-- Thumbnail navigation -->
+                              <div 
+                                v-if="parseItemImages(item.image).length > 1"
+                                class="mt-2 flex space-x-2 overflow-x-auto py-2"
+                              >
+                                <button
+                                  v-for="(imagePath, imgIndex) in parseItemImages(item.image)"
+                                  :key="imgIndex"
+                                  @click="activeImageIndexes[index] = imgIndex"
+                                  class="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden transition-all duration-200"
+                                  :class="[
+                                    (activeImageIndexes[index] || 0) === imgIndex 
+                                      ? 'ring-2 ring-indigo-500 opacity-100 scale-105' 
+                                      : 'opacity-70 hover:opacity-100'
+                                  ]"
+                                >
+                                  <img 
+                                    :src="`/storage/${imagePath}`" 
+                                    :alt="`${item.title} thumbnail ${imgIndex + 1}`"
+                                    class="w-full h-full object-cover"
+                                  />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -356,6 +466,24 @@ const formatDate = (dateString) => {
 .article-content code {
   font-family: monospace;
   color: #a5b4fc;
+}
+
+/* Add animation for image gallery transitions */
+.aspect-w-16 img {
+  transition: opacity 0.3s ease;
+}
+
+/* Ensure aspect ratio is maintained for the gallery */
+.aspect-w-16 {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 ratio */
+}
+
+.aspect-w-16 img {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
 }
 
 /* Print styles */

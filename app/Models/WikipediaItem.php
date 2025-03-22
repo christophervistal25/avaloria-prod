@@ -11,11 +11,31 @@ class WikipediaItem extends Model
         'wikipedia_id',
         'title',
         'description',
-        'order'
+        'order',
+        'image',
+    ];
+
+    public $appends = [
+        'image_url',
     ];
 
     public function wikipedia(): BelongsTo
     {
         return $this->belongsTo(Wikipedia::class);
+    }
+
+
+    /**
+     * Get the image URL.
+     *
+     * @return string|null
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+        
+        return null;
     }
 }

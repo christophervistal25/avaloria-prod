@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use PDO;
 use App\Models\User;
+use App\Models\Account;
 use App\Models\VoteLog;
 use App\Models\Character;
 use Illuminate\Http\Request;
@@ -48,17 +49,24 @@ class HomeController extends Controller
         $accounts = AccountDetail::with(['account_information', 'account_information.characters'])->where('email', auth()->user()->email)->orderBy('regdate', 'DESC')->get();
         $accountNames = AccountDetail::where('email', auth()->user()->email)?->get()?->pluck('account')->toArray();
         $characters = Character::whereIn('account', $accountNames)->get(['m_idPlayer', 'm_szName']);
+        $email = auth()->user()->email;
+
+        $accountUsernames = AccountDetail::where('email', $email)->get(['account'])?->pluck('account')?->toArray();
+
+        $voteLogs = VoteLog::whereIn('account', $accountUsernames)
+                        ->latest('voted_at')
+                        ->get();
+        
 
         return inertia('User/Dashboard', [
+            'email' => $email,
             'characters' => $characters,
             'gCashPurchases' => $accountPurchases->gCashDonates,
             'paypalPurchases' => $accountPurchases->paypalDonates,
             'userTotalDonateInGcash' => $userTotalDonateInGcash,
             'userTotalDonateInPaypal' => $userTotalDonateInPaypal,
             'accounts' => $accounts,
-            'voteLogs' => VoteLog::where('account', auth()->user()->account?->account)
-                    ->latest('voted_at')
-                    ->get()
+            'voteLogs' => $voteLogs,
         ]);
     }
 
@@ -146,4 +154,35 @@ class HomeController extends Controller
             ], 422);
         }
     }
+
+
+    public function newPassword(Request $request)
+    {
+     
+        if(auth()->user()->email != $request->email) {
+            return abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'new_password_confirmation' => ['required', 'string', 'min:8',],
+            'new_password' => ['required', 'string', 'min:8', 'same:new_password_confirmation'],
+        ]);
+
+        $password = md5(config('app.game_hash') . $request->new_password);
+        $account = $request->username;
+
+        $db = DB::connection('ACCOUNT_DBF');
+        $stmt = $db->getPdo()->prepare('EXEC dbo.usp_ChangePW ?, ?');
+        $stmt->bindParam(1, $account);
+        $stmt->bindParam(2, $password);
+        $stmt->execute();
+
+        $result = $stmt->fetch(PDO::FETCH_NUM);
+        if ($result[0] == 1) {
+            return response()->json([
+                'message' => 'Password changed successfully!',
+            ], 201);
+        }
+    }
+
 } 

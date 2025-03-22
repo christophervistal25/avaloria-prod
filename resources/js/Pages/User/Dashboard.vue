@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import Layout from "@/Pages/Layouts/Layout.vue";
-import { Head, usePage, router } from "@inertiajs/vue3";
+import { Head, usePage, router, Link } from "@inertiajs/vue3";
 import Vote from "@/components/Vote.vue";
 
 import moment from "moment";
@@ -9,6 +9,7 @@ import axios from "axios";
 import { Notyf } from "notyf";
 
 const props = defineProps({
+  email : String,
   gCashPurchases: {
     type: Array,
     default: () => [],
@@ -44,6 +45,20 @@ const page = usePage();
 const isGCashVisible = ref(false);
 const isPayPalVisible = ref(false);
 const isVoteLogsVisible = ref(false);
+// New modal state for password change
+const isPasswordModalOpen = ref(false);
+const isModalSubmitting = ref(false);
+const passwordErrors = ref({});
+
+// Change password modal form
+const passwordModalForm = ref({
+  email : props.email,
+  selectedAccount: "",
+  new_password: "",
+  new_password_confirmation: ""
+});
+
+
 
 // Reactive forms and data
 const passwordForm = ref({
@@ -62,6 +77,9 @@ const redeemForm = ref({
   selectedAccount: "",
   code: "",
 });
+
+
+
 
 // Form submission handlers
 const resetPassword = () => {
@@ -156,6 +174,30 @@ const togglePayPal = () => {
 // Add this with your other toggle methods
 const toggleVoteLogs = () => {
   isVoteLogsVisible.value = !isVoteLogsVisible.value;
+};
+
+const submitPasswordModal = () => {
+  isModalSubmitting.value = true;
+  axios.post(`/user-account/new-password`, passwordModalForm.value)
+    .then((response) => {
+      if (response.status === 200) {
+        new Notyf().success("Password updated successfully");
+        isPasswordModalOpen.value = false;
+        passwordModalForm.value = {
+          current_password: "",
+          new_password: "",
+          new_password_confirmation: ""
+        };
+      }
+    })
+    .catch((error) => {
+      if (error.response.status === 422) {
+        passwordErrors.value = error.response.data.errors;
+      }
+    })
+    .finally(() => {
+      isModalSubmitting.value = false;
+    });
 };
 </script>
 
@@ -570,8 +612,8 @@ const toggleVoteLogs = () => {
                   <span
                     class="ml-3 text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full"
                   >
-                    {{ paypalPurchases.length }} transactions
-                  </span>
+                </span>
+                {{ paypalPurchases.length }} transactions
                 </h2>
                 <div class="flex items-center">
                   <span class="text-gray-400 mr-2 text-sm font-medium"
@@ -1066,7 +1108,7 @@ const toggleVoteLogs = () => {
                         </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <a
+                        <Link
                           :href="`/donates?account=${account.account}`"
                           class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors duration-200"
                         >
@@ -1084,7 +1126,26 @@ const toggleVoteLogs = () => {
                             />
                           </svg>
                           Donate
-                        </a>
+                        </Link>
+                        <button
+                          @click="isPasswordModalOpen = true; passwordModalForm.selectedAccount = account.account"
+                          class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors duration-200 ml-2"
+                        >
+                          <svg
+                            class="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                            />
+                          </svg>
+                          Change Password
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -1418,6 +1479,121 @@ const toggleVoteLogs = () => {
         </div>
       </div>
     </div>
+    
+
+
+
+    <!-- Modal Backdrop -->
+    <div 
+      v-if="isPasswordModalOpen" 
+      class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity z-40"
+      @click="closePasswordModal"
+    ></div>
+
+    <!-- Modal Content -->
+    <transition
+      enter-active-class="transition ease-out duration-300"
+      enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+      enter-to-class="opacity-100 translate-y-0 sm:scale-100"
+      leave-active-class="transition ease-in duration-200"
+      leave-from-class="opacity-100 translate-y-0 sm:scale-100"
+      leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+    >
+      <div 
+        v-if="isPasswordModalOpen" 
+        class="fixed inset-0 z-50 overflow-y-auto"
+        aria-labelledby="modal-title" 
+        role="dialog" 
+        @click="isPasswordModalOpen = false"
+        aria-modal="true"
+      >
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div 
+            class="relative inline-block align-bottom bg-gray-900 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-800"
+            @click.stop
+          >
+            <form @submit.prevent="submitPasswordModal">
+              <div class="bg-gray-900 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                  <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                    <!-- Lock Icon -->
+                    <svg class="h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+                      Change Password
+                    </h3>
+                    <div class="mt-4 space-y-4">
+                      <!-- New Password -->
+                      <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-300">
+                          New Password
+                        </label>
+                        <div class="mt-1">
+                          <input 
+                            id="new_password" 
+                            v-model="passwordModalForm.new_password" 
+                            type="password" 
+                            name="new_password" 
+                            required 
+                            class="shadow-sm bg-gray-800 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-700 rounded-md text-white px-4 py-2.5 transition-all duration-200 backdrop-blur-sm hover:bg-gray-800/80 focus:shadow-[0_0_10px_rgba(99,102,241,0.3)] placeholder-gray-500"
+                          />
+                          <p v-if="passwordErrors.new_password" class="mt-1 text-sm text-red-500">
+                            {{ passwordErrors.new_password[0] }}
+                          </p>
+                        </div>
+                      </div>
+
+                      <!-- Confirm New Password -->
+                      <div>
+                        <label for="new_password_confirmation" class="block text-sm font-medium text-gray-300">
+                          Confirm New Password
+                        </label>
+                        <div class="mt-1">
+                          <input 
+                            id="new_password_confirmation" 
+                            v-model="passwordModalForm.new_password_confirmation" 
+                            type="password" 
+                            name="new_password_confirmation" 
+                            required 
+                            class="shadow-sm bg-gray-800 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-700 rounded-md text-white px-4 py-2.5 transition-all duration-200 backdrop-blur-sm hover:bg-gray-800/80 focus:shadow-[0_0_10px_rgba(99,102,241,0.3)] placeholder-gray-500"
+                            placeholder="Confirm your new password"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button 
+                  type="submit" 
+                  class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  :disabled="isModalSubmitting"
+                >
+                  <svg v-if="isModalSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ isModalSubmitting ? 'Updating...' : 'Update Password' }}
+                </button>
+                <button 
+                  type="button" 
+                  class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-700 shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-gray-300 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  @click="isPasswordModalOpen = false"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+
   </Layout>
 </template>
 

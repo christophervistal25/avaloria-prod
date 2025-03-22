@@ -321,24 +321,33 @@ const props = defineProps(["downloads"]);
                       <div class="flex items-center space-x-4">
                         <div class="p-2 bg-blue-500/10 rounded-xl">
                           <!-- Flyff-specific icon based on download type -->
-                          <svg
-                            v-if="option.type === 'client'"
+                          <div
+                            v-if="option.class == 'gdrive'"
                             class="w-8 h-8 text-blue-400"
                             viewBox="0 0 24 24"
                             fill="currentColor"
                           >
-                            <path d="M12 2L2 19h20L12 2zm0 3l7 13H5l7-13z" />
-                          </svg>
-                          <svg
-                            v-else
-                            class="w-8 h-8 text-purple-400"
+                            <img src="http://localhost:8000/gdrive.webp" alt="">
+                        </div>
+
+                        <div
+                            v-if="option.class == 'mediafire'"
+                            class="w-8 h-8 text-blue-400"
                             viewBox="0 0 24 24"
                             fill="currentColor"
                           >
-                            <path
-                              d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"
-                            />
-                          </svg>
+                            <img src="http://localhost:8000/med.webp" alt="">
+                        </div>
+
+                        <div
+                            v-if="option.class == 'media'"
+                            class="w-8 h-8 text-blue-400"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                          >
+                            <img src="http://localhost:8000/mega.webp" alt="">
+                        </div>
+                          
                         </div>
                         <div>
                           <h2 class="text-xl font-bold text-white">

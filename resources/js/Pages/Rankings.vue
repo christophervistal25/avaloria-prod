@@ -386,7 +386,7 @@ const formatPlaytime = (seconds) => {
                       <span>{{ player.m_nLevel }}</span>
                     </div>
                   </td>
-                  <td class="py-4 px-6">{{ getClassName(player.m_nJob )}}</td>
+                  <td class="py-4 px-6">{{ getClassName(player.m_nJob)}}</td>
                   <td class="py-4 px-6">{{ player.m_idGuild || "None" }}</td>
                   <td class="py-4 px-6">
                     {{ formatPlaytime(player.TotalPlayTime) }}
